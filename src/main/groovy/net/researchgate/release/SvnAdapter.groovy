@@ -20,6 +20,8 @@ class SvnAdapter extends BaseScmAdapter {
     private static final String ERROR = 'Commit failed'
 
     private static final def urlPattern = ~/URL:\s(.*?)(\/(?i)(trunk|branches|tags).*?)$/
+	
+	private static final def projUrlPattern = ~/URL:\s(.*\/).*$/
 
     private static final def revPattern = ~/Revision:\s(.*?)$/
 
@@ -133,9 +135,10 @@ class SvnAdapter extends BaseScmAdapter {
         String svnUrl = attributes.svnUrl
         String svnRev = attributes.svnRev ?: attributes.initialSvnRev //release set by commit below when needed, no commit => initial
         String svnRoot = attributes.svnRoot
+		String svnProj = attributes.svnProj
         String svnTag = tagName()
 
-        svnExec(['copy', "${svnUrl}@${svnRev}", "${svnRoot}/tags/${svnTag}", '--parents', '-m', message])
+        svnExec(['copy', "${svnProj}@${svnRev}", "${svnRoot}/tags/${svnTag}", '--parents', '-m', message])
     }
 
     @Override
@@ -202,9 +205,18 @@ class SvnAdapter extends BaseScmAdapter {
             if (matcher.matches()) {
                 attributes.initialSvnRev = matcher.group(1)
             }
+			matcher = line =~ projUrlPattern
+			if (matcher.matches()) {
+				String svnProj = matcher.group(1)
+				attributes.svnProj = "$svnProj"
+			}
         }
-        if (!attributes.svnUrl || !attributes.initialSvnRev) {
-            throw new GradleException('Could not determine root SVN url or revision.')
+        if (!attributes.svnUrl || !attributes.initialSvnRev || !attributes.svnProj) {
+            println "svnRoot: " + attributes.svnRoot
+			println "svnURL: " + attributes.svnUrl
+			println "initialSvnRev: " + attributes.initialSvnRev
+			println "svnProj: " + attributes.svnProj
+			throw new GradleException('Could not determine root SVN url or revision.')
         }
     }
 }
