@@ -27,11 +27,13 @@ class GitAdapter extends BaseScmAdapter {
     class GitConfig {
         String requireBranch = 'master'
         def pushToRemote = 'origin' // needs to be def as can be boolean or string
-
+        def pushOptions = []
+        
         /** @deprecated Remove in version 3.0 */
         @Deprecated
         boolean pushToCurrentBranch = false
         String pushToBranchPrefix
+        boolean commitVersionFileOnly = false
 
         void setProperty(String name, Object value) {
             if (name == 'pushToCurrentBranch') {
@@ -105,19 +107,27 @@ class GitAdapter extends BaseScmAdapter {
         def tagName = tagName()
         exec(['git', 'tag', '-a', tagName, '-m', message], errorMessage: "Duplicate tag [$tagName]", errorPatterns: ['already exists'])
         if (shouldPush()) {
-            exec(['git', 'push', '--porcelain', extension.git.pushToRemote, tagName], errorMessage: "Failed to push tag [$tagName] to remote", errorPatterns: ['[rejected]', 'error: ', 'fatal: '])
+            exec(['git', 'push', '--porcelain', extension.git.pushToRemote, tagName] + extension.git.pushOptions, errorMessage: "Failed to push tag [$tagName] to remote", errorPatterns: ['[rejected]', 'error: ', 'fatal: '])
         }
     }
 
     @Override
     void commit(String message) {
-        exec(['git', 'commit', '-a', '-m', message], errorPatterns: ['error: ', 'fatal: '])
+        List<String> command = ['git', 'commit', '-m', message]
+        if (extension.git.commitVersionFileOnly) {
+            command << extension.versionPropertyFile
+        } else {
+            command << '-a'
+        }
+
+        exec(command, errorPatterns: ['error: ', 'fatal: '])
+
         if (shouldPush()) {
             def branch = gitCurrentBranch()
             if (extension.git.pushToBranchPrefix) {
                 branch = "HEAD:${extension.git.pushToBranchPrefix}${branch}"
             }
-            exec(['git', 'push', '--porcelain', extension.git.pushToRemote, branch], errorMessage: 'Failed to push to remote', errorPatterns: ['[rejected]', 'error: ', 'fatal: '])
+            exec(['git', 'push', '--porcelain', extension.git.pushToRemote, branch] + extension.git.pushOptions, errorMessage: 'Failed to push to remote', errorPatterns: ['[rejected]', 'error: ', 'fatal: '])
         }
     }
 

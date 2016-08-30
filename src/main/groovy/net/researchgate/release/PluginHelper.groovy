@@ -83,7 +83,7 @@ class PluginHelper {
                 attributes.propertiesFileCreated = true
             } else {
                 log.debug "[$propertiesFile.canonicalPath] was not found, and user opted out of it being created. Throwing exception."
-                throw new GradleException("[$propertiesFile.canonicalPath] not found and you opted out of it being created,\n please create it manually and and specify the version property.")
+                throw new GradleException("[$propertiesFile.canonicalPath] not found and you opted out of it being created,\n please create it manually and specify the version property.")
             }
         }
         propertiesFile
@@ -96,8 +96,8 @@ class PluginHelper {
             } else {
                 // we use replace here as other ant tasks escape and modify the whole file
                 project.ant.replaceregexp(file: file, byline: true) {
-                    regexp(pattern: "^(\\s*)$key(\\s*)=(\\s*).+")
-                    substitution(expression: "\\1$key\\2=\\3$version")
+                    regexp(pattern: "^(\\s*)$key((\\s*[=|:]\\s*)|(\\s+)).+\$")
+                    substitution(expression: "\\1$key\\2$version")
                 }
             }
         } catch (BuildException be) {
@@ -106,7 +106,7 @@ class PluginHelper {
     }
 
     boolean isVersionDefined() {
-        project.version && 'unspecified' != project.version
+        project.version && Project.DEFAULT_VERSION != project.version
     }
 
     void warnOrThrow(boolean doThrow, String message) {
